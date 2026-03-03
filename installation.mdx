@@ -175,7 +175,7 @@ Filecast automatically detects and uses these tools when available. Without them
 
 On first launch, Filecast creates a configuration directory:
 
-```
+```text
 ~/.config/filecast/
 ├── history.db         # SQLite database for clipboard, command, and app launch history
 ├── settings.conf      # Window position and UI settings
@@ -187,7 +187,7 @@ On first launch, Filecast creates a configuration directory:
 Create `~/.config/filecast/search.yaml` to exclude directories from searches:
 
 ```yaml
-exclusions:
+exclude_dirs:
   - node_modules
   - .git
   - target

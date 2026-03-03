@@ -65,7 +65,7 @@ Filecast has powerful search capabilities beyond just launching apps.
 
 Use the `/` prefix to search for files by name:
 
-```
+```text
 /config      # Find files named "config"
 /main.rs     # Find Rust source files
 /.bashrc     # Find dotfiles
@@ -79,7 +79,7 @@ If you have `fd` installed, file searches are much faster and automatically resp
 
 Use the `@` prefix to search file contents:
 
-```
+```text
 @TODO           # Find all TODO comments
 @import React   # Find React imports
 @function       # Find function definitions
@@ -91,7 +91,7 @@ Filecast searches your home directory by default. Configure exclusions in `~/.co
 
 Use the `:` prefix to execute shell commands:
 
-```
+```bash
 :ls -la         # List files
 :git status     # Check git status
 :pwd            # Print working directory
