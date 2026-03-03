@@ -1,0 +1,65 @@
+{
+  "projectType": "cli-tool",
+  "projectName": "Filecast",
+  "projectDescription": "A fast Spotlight/Raycast-style launcher for Linux with fuzzy search, file browser, grep, and app launching.",
+  "theme": "aspen",
+  "primaryColor": "#6366f1",
+  "lightColor": "#818cf8",
+  "darkColor": "#4f46e5",
+  "navigation": {
+    "groups": [
+      {
+        "group": "Get Started",
+        "pages": [
+          "introduction",
+          "installation",
+          "quickstart"
+        ]
+      },
+      {
+        "group": "Usage Guides",
+        "pages": [
+          "guides/search-syntax",
+          "guides/file-browser",
+          "guides/clipboard",
+          "guides/keyboard-shortcuts"
+        ]
+      },
+      {
+        "group": "Configuration",
+        "pages": [
+          "configuration/window-position",
+          "configuration/search-exclusions"
+        ]
+      },
+      {
+        "group": "Reference",
+        "pages": [
+          "reference/requirements",
+          "reference/troubleshooting"
+        ]
+      }
+    ]
+  },
+  "keyFeatures": [
+    "Fuzzy search for apps and files",
+    "File browser with vim-style navigation",
+    "Grep search through file contents",
+    "Find files by name",
+    "Shell command execution",
+    "Clipboard history with pin and expiry",
+    "Global hotkey (Super+Space)",
+    "Configurable window positioning"
+  ],
+  "publicApiSurface": [
+    "Fuzzy search (no prefix)",
+    "@pattern - Grep file contents",
+    "/pattern - Find files by name",
+    ":command - Run shell command",
+    "Super+Space - Toggle launcher",
+    "Ctrl+1/2/3/4 - Switch views",
+    "vim navigation (h/j/k/l)",
+    "~/.config/filecast/settings.conf",
+    "~/.config/filecast/search.yaml"
+  ]
+}
