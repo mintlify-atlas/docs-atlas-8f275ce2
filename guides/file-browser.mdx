@@ -1,0 +1,433 @@
+---
+title: File Browser
+description: Navigate your filesystem with vim-style keyboard shortcuts and command execution
+---
+
+The Files view provides a fast, keyboard-driven file browser with vim-style navigation and integrated command execution.
+
+## Accessing the Files View
+
+<CardGroup cols={2}>
+  <Card title="Keyboard" icon="keyboard">
+    Press `Ctrl+2` from any view
+  </Card>
+  <Card title="Tab Navigation" icon="arrow-right">
+    Press `Tab` to cycle through views
+  </Card>
+</CardGroup>
+
+## Navigation
+
+### Vim-Style Movement
+
+Filecast supports both arrow keys and vim-style keybindings for navigation.
+
+<CodeGroup>
+```text Vim Keys
+j       Move down
+k       Move up
+l       Open file / Enter directory
+h       Go to parent directory
+```
+
+```text Arrow Keys
+↓       Move down
+↑       Move up
+→       Open file / Enter directory
+←       Go to parent directory
+```
+</CodeGroup>
+
+<Note>
+Vim keys (`j`, `k`, `l`, `h`) work identically to arrow keys. Use whichever feels more comfortable.
+</Note>
+
+### Directory Navigation
+
+From `src/ui/launcher.rs:261-301`, the Files view handles navigation:
+
+<Tabs>
+  <Tab title="Enter Directory">
+    **Keys:** `→`, `l`, or `Enter`
+
+    ```text
+    Documents/              # Selected
+    ├─ projects/
+    ├─ notes.txt
+    └─ README.md
+    
+    Press → or l or Enter → Navigate into Documents/
+    ```
+
+    When you enter a directory:
+    - Selection resets to the first item
+    - Directory contents load immediately
+    - Current path updates in the header
+  </Tab>
+
+  <Tab title="Parent Directory">
+    **Keys:** `←`, `h`, or `Backspace`
+
+    ```text
+    /home/user/Documents/projects/
+    
+    Press ← or h or Backspace → Navigate to /home/user/Documents/
+    ```
+
+    The parent directory is always available via the `..` entry at the top of the list.
+  </Tab>
+
+  <Tab title="Open File">
+    **Keys:** `→`, `l`, or `Enter`
+
+    ```text
+    document.pdf            # Selected
+    
+    Press → or l or Enter → Opens in default application
+    ```
+
+    From `src/core/app.rs:316-325`, files are:
+    - Logged to recent access history
+    - Opened with the system's default application using `opener::open()`
+  </Tab>
+</Tabs>
+
+## File List Display
+
+### Visual Layout
+
+The file browser shows (from `src/ui/launcher.rs:729-770`):
+
+| Element | Description |
+|---------|-------------|
+| 📁 Icon | Directory or file type icon |
+| Name | File or directory name |
+| Size | File size (human-readable, right-aligned) |
+| Selection | Highlighted background for selected item |
+
+### File Sorting
+
+From `src/core/fs.rs:68-72`, files are sorted:
+
+1. **Directories first** - All folders appear before files
+2. **Alphabetically** - Within each group, sorted by name
+
+```text
+Example sorted list:
+📁 Desktop/
+📁 Documents/
+📁 Downloads/
+📄 README.md
+📄 config.yaml
+```
+
+### Hidden Files
+
+By default, hidden files (starting with `.`) are not shown. This behavior is controlled by `app.show_hidden` in `src/core/fs.rs:35-61`.
+
+<Tip>
+Hidden file toggling is not yet exposed in the UI, but the infrastructure exists in `src/core/fs.rs`.
+</Tip>
+
+## Command Mode
+
+Execute shell commands directly in the current directory.
+
+### Entering Command Mode
+
+**Key:** `c`
+
+From `src/ui/launcher.rs:307-311`:
+
+```text
+Press 'c' in Files view → Opens command input at top
+```
+
+Command mode shows:
+- Dollar sign prompt: `$`
+- Text input field
+- Command history (when input is empty)
+
+### Running Commands
+
+<Steps>
+  <Step title="Press 'c'">
+    Activate command mode from Files view
+  </Step>
+  
+  <Step title="Type command">
+    ```bash
+    ls -la
+    ```
+  </Step>
+  
+  <Step title="Press Enter">
+    Command executes in the current directory
+  </Step>
+  
+  <Step title="View output">
+    Output appears below the file list (up to 80px height)
+  </Step>
+</Steps>
+
+### Command Execution
+
+From `src/ui/launcher.rs:1104-1140`, commands:
+
+1. **Execute synchronously** - UI waits for completion
+2. **Run in current directory** - Uses `app.current_path`
+3. **Save to history** - Stored in database with path context
+4. **Display output** - Shows stdout/stderr
+5. **Refresh directory** - Updates file list after execution
+
+```rust
+// Simplified from src/ui/launcher.rs:1104
+fn execute_command_sync(&mut self, command: &str, app: &mut App) {
+    // Log to history
+    history::log_command(&app.db_connection, command, &app.current_path);
+    
+    // Execute
+    let output = std::process::Command::new(parts[0])
+        .args(&parts[1..])
+        .current_dir(&app.current_path)
+        .output();
+    
+    // Display result and refresh
+    // ...
+}
+```
+
+### Command History
+
+When command input is **empty**, press `↑/↓` to browse history.
+
+<Tabs>
+  <Tab title="Browse">
+    **Keys:** `↑` / `↓` (when input is empty)
+
+    ```text
+    Command History:
+    > $ ls -la              /home/user/projects
+    > $ git status          /home/user/projects
+    > $ npm install         /home/user/projects/app
+    ```
+
+    Each entry shows:
+    - Command text (left)
+    - Directory where it was run (right, muted)
+  </Tab>
+
+  <Tab title="Execute from History">
+    **Select command** → **Press Enter**
+
+    The command re-executes in its **original directory**, not necessarily the current one.
+
+    From `src/ui/launcher.rs:667-673`:
+    ```rust
+    run_history_command = Some((entry.command.clone(), entry.path.clone()));
+    // Changes to entry.path, then executes command
+    ```
+  </Tab>
+
+  <Tab title="Click to Execute">
+    Commands in history are clickable - single click to execute.
+  </Tab>
+</Tabs>
+
+### Tab Completion
+
+**Key:** `Tab` (while typing a command)
+
+From `src/ui/launcher.rs:1142-1193`, tab completion:
+
+- Completes **file and directory names**
+- Works with **partial paths** (e.g., `src/co<Tab>`)
+- Cycles through matches on repeated Tab presses
+- Appends `/` to directories automatically
+
+<CodeGroup>
+```bash First Tab
+$ cat Do<Tab>
+→ $ cat Documents/
+```
+
+```bash Partial Path
+$ cd proj/src/co<Tab>
+→ $ cd proj/src/core/
+```
+
+```bash Multiple Matches
+$ ls D<Tab><Tab><Tab>
+Desktop/ → Documents/ → Downloads/ → Desktop/ ...
+```
+</CodeGroup>
+
+### Exiting Command Mode
+
+**Key:** `Escape`
+
+From `src/ui/launcher.rs:237-241`:
+- Closes command input
+- Clears typed command
+- Returns focus to file list
+
+## Refresh Directory
+
+**Key:** `r`
+
+Reloads the current directory from disk. Useful after:
+- Running commands that modify files
+- External changes to the filesystem
+- Creating/deleting files
+
+From `src/ui/launcher.rs:303-305` and `src/core/app.rs:186-192`:
+
+```rust
+pub fn refresh_directory(&mut self) -> Result<()> {
+    let entries = fs::read_directory(&self.current_path, self.show_hidden)?;
+    self.file_list = entries;
+    self.selected_index = 0;
+    self.update_preview();
+    Ok(())
+}
+```
+
+## Mouse Support
+
+While Filecast is keyboard-focused, mouse interaction is supported:
+
+| Action | Result |
+|--------|--------|
+| **Click on file** | Opens file in default app |
+| **Click on directory** | Enters directory |
+| **Hover over item** | Highlights item (updates selection) |
+| **Click on command in history** | Executes command |
+
+From `src/ui/launcher.rs:776-807`.
+
+## Current Path Display
+
+The header shows the current working directory:
+
+```text
+📂 /home/user/Documents/projects/filecast
+```
+
+From `src/ui/launcher.rs:507-521`, this updates automatically when you navigate.
+
+## Integration with Other Views
+
+### From Search View
+
+Searching for files in the Search view and selecting them:
+- Opens files with default application
+- Navigates to directories (updates Files view)
+
+From `src/core/app.rs:350-384`:
+
+```rust
+pub fn execute_search_result(&mut self, index: usize) -> Result<()> {
+    match &result.kind {
+        SearchResultKind::File(path) => {
+            if path.is_dir() {
+                self.change_directory(path.clone())?;
+            } else {
+                self.open_file(path.clone())?;
+            }
+        }
+        // ...
+    }
+}
+```
+
+### Recent Files
+
+Files you open are tracked in the database. Access them from:
+- Search view (when query is empty)
+- Recent files list (prioritized in search results)
+
+## File Operations
+
+<Accordion title="Open File">
+  **Keys:** `→`, `l`, `Enter`
+
+  Opens the selected file with the system's default application using the `opener` crate.
+
+  Supported on Linux via `xdg-open`.
+</Accordion>
+
+<Accordion title="Reveal in Folder">
+  The infrastructure exists in `src/core/app.rs:387-392` but is not yet bound to a keyboard shortcut:
+
+  ```rust
+  pub fn reveal_in_folder(&self, path: &PathBuf) -> Result<()> {
+      if let Some(parent) = path.parent() {
+          opener::open(parent)?;
+      }
+      Ok(())
+  }
+  ```
+</Accordion>
+
+## Keyboard Shortcuts Reference
+
+| Key | Action |
+|-----|--------|
+| `↑` or `k` | Move selection up |
+| `↓` or `j` | Move selection down |
+| `→` or `l` or `Enter` | Open file / Enter directory |
+| `←` or `h` or `Backspace` | Go to parent directory |
+| `r` | Refresh current directory |
+| `c` | Enter command mode |
+| `Escape` | Exit command mode / Return to Search |
+| `Ctrl+2` | Switch to Files view |
+| `Tab` | Cycle to next view |
+
+### Command Mode Keys
+
+| Key | Action |
+|-----|--------|
+| `Enter` | Execute command |
+| `Escape` | Exit command mode |
+| `Tab` | Complete file/directory name |
+| `↑/↓` | Browse command history (when input empty) |
+
+## Tips
+
+<AccordionGroup>
+  <Accordion title="Use command mode for quick operations">
+    Instead of switching to a terminal:
+    - `c` → `git status` → `Enter`
+    - `c` → `mkdir new-folder` → `Enter`
+    - `c` → `touch file.txt` → `Enter`
+    - Press `r` to refresh and see changes
+  </Accordion>
+
+  <Accordion title="Command history saves context">
+    Commands remember the directory they were run in. This means you can:
+    - Run `npm install` in a project directory
+    - Navigate elsewhere
+    - Re-run the same command later - it executes in the original directory
+  </Accordion>
+
+  <Accordion title="Tab completion is your friend">
+    Long file names? Use Tab:
+    - Start typing a few characters
+    - Press Tab to complete
+    - Keep pressing Tab to cycle through matches
+  </Accordion>
+
+  <Accordion title="Vim keys work everywhere">
+    If you're a vim user, `hjkl` navigation works in Files view just like in vim:
+    - `h` = left (parent)
+    - `j` = down
+    - `k` = up  
+    - `l` = right (open/enter)
+  </Accordion>
+</AccordionGroup>
+
+## Related
+
+- [Search Syntax](/guides/search-syntax) - Find files quickly with search
+- [Keyboard Shortcuts](/guides/keyboard-shortcuts) - Complete shortcuts reference
+- [Clipboard History](/guides/clipboard) - Manage clipboard entries

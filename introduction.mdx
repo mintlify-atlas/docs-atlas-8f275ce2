@@ -1,0 +1,150 @@
+---
+title: Introduction
+description: A fast Spotlight/Raycast-style launcher for Linux built with Rust and egui
+---
+
+<img
+  className="block dark:hidden"
+  src="/images/hero-light.png"
+  alt="Filecast Hero Light"
+/>
+<img
+  className="hidden dark:block"
+  src="/images/hero-dark.png"
+  alt="Filecast Hero Dark"
+/>
+
+## What is Filecast?
+
+Filecast is a fast, keyboard-driven application launcher for Linux that brings the elegance of Spotlight and Raycast to your desktop. Built with Rust and egui for maximum performance, Filecast helps you launch applications, search files, browse directories, and execute commands without leaving your keyboard.
+
+Press `Super+Space` from anywhere to instantly access your entire system.
+
+<CardGroup cols={2}>
+  <Card
+    title="Installation"
+    icon="download"
+    href="/installation"
+  >
+    Install Filecast on Debian/Ubuntu or build from source
+  </Card>
+  <Card
+    title="Quick Start"
+    icon="rocket"
+    href="/quickstart"
+  >
+    Get up and running in under 2 minutes
+  </Card>
+  <Card
+    title="Search Syntax"
+    icon="magnifying-glass"
+    href="/guides/search-syntax"
+  >
+    Master fuzzy search, grep, file finding, and shell commands
+  </Card>
+  <Card
+    title="Keyboard Shortcuts"
+    icon="keyboard"
+    href="/guides/keyboard-shortcuts"
+  >
+    Complete reference for all keyboard shortcuts
+  </Card>
+</CardGroup>
+
+## Key Features
+
+### Fuzzy Search
+
+Smart pattern matching finds applications and files quickly. Type `vsc` to find "Visual Studio Code", or `firef` for "Firefox". No need to type full names.
+
+### File Browser
+
+Navigate your filesystem with vim-style keybindings (`j/k` to move, `h/l` to navigate directories). Built-in file preview shows content without opening files.
+
+### Grep Search
+
+Search inside files with `@pattern` syntax. Filecast uses `ripgrep` when available for lightning-fast content searches across your entire filesystem.
+
+```bash
+@TODO          # Find all TODO comments
+@import React  # Find React imports
+```
+
+### Find Files
+
+Locate files by name with `/pattern` syntax. Uses `fd` when available for faster searches with automatic gitignore respect.
+
+```bash
+/config        # Find files named config
+/main.rs       # Find Rust source files
+```
+
+### Shell Commands
+
+Execute shell commands directly from the Search view with `:command` or from the Files view by pressing `c`. Access your command history for quick re-execution.
+
+```bash
+:ls -la        # List files with details
+:git status    # Check git status
+```
+
+### Clipboard History
+
+Automatic clipboard tracking stores your last 50 clipboard entries. Pin important items to prevent expiration (entries expire after 24 hours by default). Search through your clipboard history and restore any item with one keypress.
+
+### Global Hotkey
+
+Toggle Filecast from anywhere with `Super+Space`. The launcher appears instantly over your current window, always accessible regardless of which application has focus.
+
+### Configurable Window Position
+
+Place the launcher exactly where you want it:
+- Top Center (default)
+- Center
+- Top Left / Top Right
+- Bottom Center / Bottom Left / Bottom Right
+
+Adjust position in the Settings view (`Ctrl+4`).
+
+## What Makes Filecast Different?
+
+**Built for Linux**: Native X11 integration for global hotkeys and window management. No Electron, no web technologies - just pure Rust performance.
+
+**Vim-Style Navigation**: If you use vim keybindings, you'll feel right at home. `j/k` for navigation, `h/l` for directory traversal.
+
+**Smart Search Exclusions**: Configure which directories to exclude from searches via `~/.config/filecast/search.yaml`. Skip `node_modules`, `.git`, and other noise.
+
+**Built with Rust**: Compiled binary with no runtime dependencies (except optional `rg` and `fd`). Fast startup, low memory usage, no garbage collection pauses.
+
+## System Requirements
+
+<Note>
+Filecast requires Linux with X11 for the global hotkey functionality. Wayland support is not currently available.
+</Note>
+
+**Required**:
+- Linux with X11
+- Any modern Linux distribution (Debian, Ubuntu, Arch, Fedora, etc.)
+
+**Optional** (for enhanced performance):
+- `rg` (ripgrep) - Faster grep searches
+- `fd` - Faster file finding
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card
+    title="Install Filecast"
+    icon="download"
+    href="/installation"
+  >
+    Choose your installation method and get Filecast running
+  </Card>
+  <Card
+    title="Take the Quick Start"
+    icon="person-running"
+    href="/quickstart"
+  >
+    Learn the basics in under 2 minutes
+  </Card>
+</CardGroup>

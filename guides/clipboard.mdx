@@ -1,0 +1,454 @@
+---
+title: Clipboard History
+description: Automatic clipboard tracking with pin and expiry functionality
+---
+
+Filecast automatically tracks your clipboard history, allowing you to access previously copied text and manage entries with pin and delete operations.
+
+## Overview
+
+The Clipboard view provides:
+
+<CardGroup cols={2}>
+  <Card title="Automatic Tracking" icon="clock-rotate-left">
+    Monitors clipboard every 500ms
+  </Card>
+  <Card title="Pin Important Items" icon="thumbtack">
+    Keep entries permanently
+  </Card>
+  <Card title="24-Hour Expiry" icon="hourglass">
+    Auto-delete old unpinned entries
+  </Card>
+  <Card title="Quick Access" icon="copy">
+    Copy any entry back to clipboard
+  </Card>
+</CardGroup>
+
+## Accessing Clipboard View
+
+<CodeGroup>
+```text Keyboard
+Ctrl+3              Switch to Clipboard view
+```
+
+```text Tab Navigation  
+Tab                 Cycle through views
+```
+</CodeGroup>
+
+## How Clipboard Tracking Works
+
+### Automatic Monitoring
+
+From `src/core/clipboard.rs:136-162`, Filecast runs a background thread that:
+
+1. **Polls clipboard** every 500 milliseconds
+2. **Detects changes** by comparing to last known content
+3. **Sends new entries** to the main app via channel
+4. **Avoids duplicates** automatically
+
+```rust
+// Simplified from src/core/clipboard.rs:136
+pub struct ClipboardMonitor {
+    pub receiver: Receiver<String>,
+}
+
+impl ClipboardMonitor {
+    pub fn start() -> Self {
+        thread::spawn(move || {
+            let mut last_content = clipboard.get_text().unwrap_or_default();
+            
+            loop {
+                thread::sleep(Duration::from_millis(500));
+                
+                if let Ok(current) = clipboard.get_text() {
+                    if current != last_content && !current.is_empty() {
+                        last_content = current.clone();
+                        let _ = tx.send(current);
+                    }
+                }
+            }
+        });
+    }
+}
+```
+
+### Entry Storage
+
+From `src/core/clipboard.rs:18-39`, clipboard entries are stored in SQLite with:
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `id` | INTEGER | Unique identifier |
+| `content` | TEXT | Clipboard text content |
+| `content_type` | TEXT | Type (default: "text") |
+| `created_at` | INTEGER | Unix timestamp |
+| `pinned` | INTEGER | 0 = unpinned, 1 = pinned |
+| `deleted` | INTEGER | 0 = active, 1 = soft deleted |
+
+<Note>
+Filecast currently only supports text clipboard content. Image and file support may be added in future versions.
+</Note>
+
+### Duplicate Handling
+
+From `src/core/clipboard.rs:42-71`, when a new clipboard entry is detected:
+
+1. **Check for duplicate** - Query for existing entry with same content
+2. **Update timestamp** - If duplicate exists, update `created_at` instead of creating new entry
+3. **Add new entry** - Only if content is unique
+
+```rust
+// Simplified from src/core/clipboard.rs:42
+pub fn add_entry(conn: &Connection, content: &str, content_type: &str) -> Result<bool> {
+    if content.trim().is_empty() {
+        return Ok(false);
+    }
+
+    // Check for duplicate
+    let exists = stmt.exists(params![content])?;
+    
+    if exists {
+        // Update timestamp instead of creating duplicate
+        conn.execute(
+            "UPDATE clipboard_history SET created_at = ?1 WHERE content = ?2",
+            params![Utc::now().timestamp(), content],
+        )?;
+        return Ok(false);
+    }
+
+    // Insert new entry
+    conn.execute(
+        "INSERT INTO clipboard_history (content, content_type, created_at, pinned, deleted)
+         VALUES (?1, ?2, ?3, 0, 0)",
+        params![content, content_type, now],
+    )?;
+    Ok(true)
+}
+```
+
+## Clipboard Operations
+
+### Copy Entry to Clipboard
+
+**Key:** `Enter`
+
+Copies the selected entry back to your system clipboard.
+
+From `src/ui/launcher.rs:325-330`:
+
+```rust
+if i.key_pressed(Key::Enter) {
+    if let Some(entry) = app.clipboard_history.get(self.selected_clipboard) {
+        let _ = clipboard::copy_to_clipboard(&entry.content);
+    }
+}
+```
+
+The `copy_to_clipboard` function (`src/core/clipboard.rs:125-129`) uses the `arboard` crate:
+
+```rust
+pub fn copy_to_clipboard(content: &str) -> anyhow::Result<()> {
+    let mut clipboard = Clipboard::new()?;
+    clipboard.set_text(content)?;
+    Ok(())
+}
+```
+
+### Pin / Unpin Entry
+
+**Key:** `p`
+
+Toggles the pin status of the selected entry.
+
+<Tabs>
+  <Tab title="Usage">
+    ```text
+    Select an entry
+    Press 'p'
+    → Entry is pinned (or unpinned if already pinned)
+    → Pinned entries appear at the top
+    ```
+  </Tab>
+
+  <Tab title="Behavior">
+    From `src/core/clipboard.rs:96-103`:
+
+    - **Pinned entries** are exempt from 24-hour expiry
+    - **Sort order** shows pinned entries first
+    - **Visual indicator** (implementation in UI)
+    - **Survives restarts** - persisted in database
+  </Tab>
+
+  <Tab title="Implementation">
+    ```rust
+    // src/core/clipboard.rs:96
+    pub fn toggle_pin(conn: &Connection, id: i64) -> Result<()> {
+        conn.execute(
+            "UPDATE clipboard_history SET pinned = NOT pinned WHERE id = ?1",
+            params![id],
+        )?;
+        Ok(())
+    }
+    ```
+
+    From `src/ui/launcher.rs:331-337`:
+    ```rust
+    if i.key_pressed(Key::P) {
+        if let Some(entry) = app.clipboard_history.get(self.selected_clipboard) {
+            let _ = clipboard::toggle_pin(&app.db_connection, entry.id);
+            app.refresh_clipboard();
+        }
+    }
+    ```
+  </Tab>
+</Tabs>
+
+<Tip>
+Pin frequently used snippets like:
+- API keys (though consider using a password manager for sensitive data)
+- Code templates
+- Email signatures
+- Commonly used commands
+</Tip>
+
+### Delete Entry
+
+**Key:** `d` or `x`
+
+Soft-deletes the selected entry. Deleted entries are hidden but not removed from the database.
+
+From `src/core/clipboard.rs:105-112` and `src/ui/launcher.rs:338-350`:
+
+```rust
+// src/core/clipboard.rs:105
+pub fn delete_entry(conn: &Connection, id: i64) -> Result<()> {
+    conn.execute(
+        "UPDATE clipboard_history SET deleted = 1 WHERE id = ?1",
+        params![id],
+    )?;
+    Ok(())
+}
+```
+
+After deletion:
+- Entry is marked `deleted = 1`
+- Selection moves to previous item (if deleting last item)
+- View refreshes immediately
+
+## 24-Hour Expiry
+
+From `src/core/clipboard.rs:114-122`, unpinned entries older than 24 hours are automatically deleted.
+
+### How It Works
+
+<Steps>
+  <Step title="Startup Cleanup">
+    When Filecast starts, expired entries are cleaned immediately:
+    ```rust
+    // src/core/app.rs:86
+    let _ = clipboard::cleanup_expired(&db_conn);
+    ```
+  </Step>
+
+  <Step title="Periodic Cleanup">
+    Every 5 minutes while running, cleanup runs automatically:
+    ```rust
+    // src/core/app.rs:409
+    if self.last_clipboard_cleanup.elapsed() > Duration::from_secs(300) {
+        let _ = clipboard::cleanup_expired(&self.db_connection);
+        self.refresh_clipboard();
+        self.last_clipboard_cleanup = Instant::now();
+    }
+    ```
+  </Step>
+
+  <Step title="Deletion Query">
+    ```sql
+    DELETE FROM clipboard_history 
+    WHERE created_at < ? 
+    AND pinned = 0
+    ```
+    Only unpinned entries older than 24 hours are deleted.
+  </Step>
+</Steps>
+
+<Warning>
+Pinned entries are **never** automatically deleted, regardless of age.
+</Warning>
+
+## Clipboard Entry Display
+
+### Sort Order
+
+From `src/core/clipboard.rs:74-94`, entries are sorted:
+
+1. **Pinned entries first** - All pinned items at the top
+2. **Most recent first** - Within each group, sorted by `created_at DESC`
+
+```sql
+SELECT id, content, content_type, created_at, pinned
+FROM clipboard_history
+WHERE deleted = 0
+ORDER BY pinned DESC, created_at DESC
+LIMIT ?1
+```
+
+### Time Display
+
+From `src/core/clipboard.rs:165-178`, timestamps are formatted as relative time:
+
+| Age | Format | Example |
+|-----|--------|----------|
+| < 1 minute | "just now" | `just now` |
+| < 1 hour | Minutes ago | `15m ago` |
+| < 24 hours | Hours ago | `3h ago` |
+| ≥ 24 hours | Days ago | `2d ago` |
+
+```rust
+pub fn format_time_ago(time: DateTime<Utc>) -> String {
+    let duration = now.signed_duration_since(time);
+    
+    if duration.num_seconds() < 60 {
+        "just now".to_string()
+    } else if duration.num_minutes() < 60 {
+        format!("{}m ago", duration.num_minutes())
+    } else if duration.num_hours() < 24 {
+        format!("{}h ago", duration.num_hours())
+    } else {
+        format!("{}d ago", duration.num_days())
+    }
+}
+```
+
+### Entry Limit
+
+The UI displays the **50 most recent entries** (configurable in `src/core/app.rs:92`):
+
+```rust
+let clipboard_history = clipboard::get_history(&db_conn, 50).unwrap_or_default();
+```
+
+## Navigation
+
+### Keyboard
+
+From `src/ui/launcher.rs:313-352`:
+
+| Key | Action |
+|-----|--------|
+| `↓` or `j` | Move selection down |
+| `↑` or `k` | Move selection up |
+| `Enter` | Copy selected entry to clipboard |
+| `p` | Toggle pin status |
+| `d` or `x` | Delete entry |
+| `Escape` | Return to Search view |
+| `Ctrl+3` | Switch to Clipboard view |
+
+### Mouse
+
+Clipboard entries support mouse interaction:
+- **Click** to copy entry to clipboard
+- **Hover** to highlight entry
+
+## Use Cases
+
+<AccordionGroup>
+  <Accordion title="Code Snippets">
+    Pin frequently used code snippets:
+    ```rust
+    println!("Debug: {:?}", value);
+    ```
+    Copy with `Enter` whenever you need it.
+  </Accordion>
+
+  <Accordion title="Terminal Commands">
+    Keep a history of commands you've copied:
+    ```bash
+    docker-compose up -d
+    git commit -m "message"
+    npm run build
+    ```
+  </Accordion>
+
+  <Accordion title="URLs and Paths">
+    Quickly access recently copied URLs or file paths without searching through browser history.
+  </Accordion>
+
+  <Accordion title="Text Templates">
+    Pin email templates, responses, or documentation snippets for instant reuse.
+  </Accordion>
+</AccordionGroup>
+
+## Database Schema
+
+From `src/core/clipboard.rs:18-39`, the full schema:
+
+```sql
+CREATE TABLE IF NOT EXISTS clipboard_history (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    content TEXT NOT NULL,
+    content_type TEXT NOT NULL DEFAULT 'text',
+    created_at INTEGER NOT NULL,
+    pinned INTEGER NOT NULL DEFAULT 0,
+    deleted INTEGER NOT NULL DEFAULT 0
+);
+
+CREATE INDEX IF NOT EXISTS idx_clipboard_created 
+  ON clipboard_history(created_at);
+
+CREATE INDEX IF NOT EXISTS idx_clipboard_pinned 
+  ON clipboard_history(pinned);
+```
+
+Database location: `~/.local/share/filecast/history.db` (or system equivalent)
+
+## Keyboard Shortcuts Reference
+
+| Shortcut | Action |
+|----------|--------|
+| `Ctrl+3` | Switch to Clipboard view |
+| `↑` or `k` | Navigate up |
+| `↓` or `j` | Navigate down |
+| `Enter` | Copy entry to clipboard |
+| `p` | Pin / Unpin entry |
+| `d` or `x` | Delete entry |
+| `Escape` | Return to Search view |
+| `Tab` | Cycle to next view |
+
+## Tips
+
+<AccordionGroup>
+  <Accordion title="Pin before it expires">
+    If you copy something you'll need later, immediately:
+    1. Press `Ctrl+3` to open Clipboard
+    2. Find the entry (usually at top)
+    3. Press `p` to pin it
+    
+    Now it won't expire after 24 hours.
+  </Accordion>
+
+  <Accordion title="Use 'd' to clean up">
+    Clipboard getting cluttered? Navigate through entries and press `d` to delete ones you don't need.
+  </Accordion>
+
+  <Accordion title="Clipboard survives restarts">
+    Your clipboard history (including pins) persists across Filecast restarts. It's stored in an SQLite database.
+  </Accordion>
+
+  <Accordion title="Duplicates update timestamp">
+    If you copy the same text multiple times, Filecast won't create duplicates. Instead, it updates the timestamp, moving the entry back to the top.
+  </Accordion>
+</AccordionGroup>
+
+## Limitations
+
+<Warning>
+Currently, Filecast only supports **text** clipboard content. Images, files, and rich content are not tracked.
+</Warning>
+
+## Related
+
+- [Keyboard Shortcuts](/guides/keyboard-shortcuts) - Complete shortcuts reference
+- [File Browser](/guides/file-browser) - Navigate and manage files
+- [Search Syntax](/guides/search-syntax) - Search for files and apps

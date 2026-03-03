@@ -1,80 +1,282 @@
 ---
-title: "Quickstart"
-description: "Start building awesome documentation in minutes"
+title: Quick Start
+description: Get started with Filecast in under 2 minutes
 ---
 
-## Get started in three steps
-
-Get your documentation site running locally and make your first customization.
-
-### Step 1: Set up your local environment
-
-<AccordionGroup>
-  <Accordion icon="copy" title="Clone your docs locally">
-    During the onboarding process, you created a GitHub repository with your docs content if you didn't already have one. You can find a link to this repository in your [dashboard](https://dashboard.mintlify.com).
-    
-    To clone the repository locally so that you can make and preview changes to your docs, follow the [Cloning a repository](https://docs.github.com/en/repositories/creating-and-managing-repositories/cloning-a-repository) guide in the GitHub docs.
-  </Accordion>
-  <Accordion icon="rectangle-terminal" title="Start the preview server">
-    1. Install the Mintlify CLI: `npm i -g mint`
-    2. Navigate to your docs directory and run: `mint dev`
-    3. Open `http://localhost:3000` to see your docs live!
-    
-    <Tip>Your preview updates automatically as you edit files.</Tip>
-  </Accordion>
-</AccordionGroup>
-
-### Step 2: Deploy your changes
-
-<AccordionGroup>
-  <Accordion icon="github" title="Install our GitHub app">
-    Install the Mintlify GitHub app from your [dashboard](https://dashboard.mintlify.com/settings/organization/github-app).
-    
-    Our GitHub app automatically deploys your changes to your docs site, so you don't need to manage deployments yourself.
-</Accordion>
-<Accordion icon="palette" title="Update your site name and colors">
-    For a first change, let's update the name and colors of your docs site.
-
-    1. Open `docs.json` in your editor.
-    2. Change the `"name"` field to your project name.
-    3. Update the `"colors"` to match your brand.
-    4. Save and see your changes instantly at `http://localhost:3000`.
-
-    <Tip>Try changing the primary color to see an immediate difference!</Tip>
-  </Accordion>
-</AccordionGroup>
-
-### Step 3: Go live
-
-<Accordion icon="rocket" title="Publish your docs">
-  1. Commit and push your changes.
-  2. Your docs will update and be live in moments!
-</Accordion>
-
-## Next steps
-
-Now that you have your docs running, explore these key features:
-
-<CardGroup cols={2}>
-
-<Card title="Write Content" icon="pen-to-square" href="/essentials/markdown">
-  Learn MDX syntax and start writing your documentation.
-</Card>
-
-<Card title="Customize style" icon="palette" href="/essentials/settings">
-  Make your docs match your brand perfectly.
-</Card>
-
-<Card title="Add code examples" icon="square-code" href="/essentials/code">
-  Include syntax-highlighted code blocks.
-</Card>
-
-<Card title="API documentation" icon="code" href="/api-reference/introduction">
-  Auto-generate API docs from OpenAPI specs.
-</Card>
-
-</CardGroup>
+This guide walks you through the basics of using Filecast. You'll learn how to launch the application, search for apps and files, navigate the four views, and use essential keyboard shortcuts.
 
 <Note>
-  **Need help?** See our [full documentation](https://mintlify.com/docs) or join our [community](https://mintlify.com/community).
+Make sure you've [installed Filecast](/installation) before starting this guide.
 </Note>
+
+## Launch Filecast
+
+<Steps>
+  <Step title="Start the application">
+    Launch Filecast from your terminal:
+
+    ```bash
+    filecast
+    ```
+
+    The launcher window appears in the top center of your screen.
+  </Step>
+
+  <Step title="Toggle with the global hotkey">
+    Press `Super+Space` (Windows/Command key + Space) to hide and show Filecast from anywhere.
+
+    <Note>
+    The `Super` key is typically the Windows key on most keyboards, or the Command key on Mac keyboards.
+    </Note>
+
+    Try it now:
+    1. Press `Super+Space` to hide Filecast
+    2. Press `Super+Space` again to bring it back
+
+    This works from any application - you never need to alt-tab to Filecast.
+  </Step>
+</Steps>
+
+## Search for Applications
+
+<Steps>
+  <Step title="Use fuzzy search">
+    Start typing an application name. Filecast uses fuzzy matching, so you can type abbreviated names:
+
+    ```
+    firef    → Firefox
+    vsc      → Visual Studio Code
+    term     → Terminal, Terminator, etc.
+    ```
+  </Step>
+
+  <Step title="Launch the application">
+    Press `↑` or `↓` to navigate results, then press `Enter` to launch the selected application.
+
+    Filecast learns from your usage - frequently launched apps appear higher in results.
+  </Step>
+</Steps>
+
+## Search Files and Content
+
+Filecast has powerful search capabilities beyond just launching apps.
+
+### Find Files by Name
+
+Use the `/` prefix to search for files by name:
+
+```
+/config      # Find files named "config"
+/main.rs     # Find Rust source files
+/.bashrc     # Find dotfiles
+```
+
+<Note>
+If you have `fd` installed, file searches are much faster and automatically respect `.gitignore` files.
+</Note>
+
+### Search Inside Files (Grep)
+
+Use the `@` prefix to search file contents:
+
+```
+@TODO           # Find all TODO comments
+@import React   # Find React imports
+@function       # Find function definitions
+```
+
+Filecast searches your home directory by default. Configure exclusions in `~/.config/filecast/search.yaml` to skip directories like `node_modules` or `.git`.
+
+### Run Shell Commands
+
+Use the `:` prefix to execute shell commands:
+
+```
+:ls -la         # List files
+:git status     # Check git status
+:pwd            # Print working directory
+```
+
+Commands run in your home directory. Command history is saved - use `↑`/`↓` to browse previous commands.
+
+## Explore the Four Views
+
+Filecast has four main views accessible via `Ctrl+1/2/3/4`:
+
+<Tabs>
+  <Tab title="Search (Ctrl+1)">
+    The default view for searching apps, files, and running commands.
+
+    **Key shortcuts**:
+    - `↑`/`↓` - Navigate results
+    - `Enter` - Execute/open selected item
+    - `Escape` - Clear search, then hide window
+
+    **Search syntax**:
+    - `text` - Fuzzy search apps and files
+    - `@pattern` - Grep file contents
+    - `/pattern` - Find files by name
+    - `:command` - Run shell command
+  </Tab>
+
+  <Tab title="Files (Ctrl+2)">
+    A full file browser with vim-style navigation.
+
+    **Key shortcuts**:
+    - `j`/`k` or `↑`/`↓` - Navigate files
+    - `l`/`Enter` or `→` - Open file / Enter directory
+    - `h`/`Backspace` or `←` - Go to parent directory
+    - `r` - Refresh current directory
+    - `c` - Enter command mode (run shell commands in current directory)
+  </Tab>
+
+  <Tab title="Clipboard (Ctrl+3)">
+    Access your clipboard history.
+
+    Filecast automatically tracks everything you copy. Clipboard entries expire after 24 hours unless pinned.
+
+    **Key shortcuts**:
+    - `j`/`k` or `↑`/`↓` - Navigate entries
+    - `Enter` - Copy selected entry to clipboard
+    - `p` - Pin/unpin entry (prevents expiration)
+    - `d` - Delete entry
+
+    **Features**:
+    - Stores last 50 clipboard entries
+    - Automatic expiration after 24 hours
+    - Pin important items to keep them permanently
+  </Tab>
+
+  <Tab title="Settings (Ctrl+4)">
+    Configure Filecast's window position.
+
+    **Available positions**:
+    - Top Center (default)
+    - Center
+    - Top Left / Top Right
+    - Bottom Center / Bottom Left / Bottom Right
+
+    Changes take effect immediately.
+  </Tab>
+</Tabs>
+
+## Essential Keyboard Shortcuts
+
+Here are the keyboard shortcuts you'll use most often:
+
+### Global Shortcuts
+
+| Key | Action |
+|-----|--------|
+| `Super+Space` | Toggle Filecast visibility |
+| `Ctrl+1` | Switch to Search view |
+| `Ctrl+2` | Switch to Files view |
+| `Ctrl+3` | Switch to Clipboard view |
+| `Ctrl+4` | Switch to Settings view |
+| `Escape` | Clear search / Back / Hide window |
+
+### Search View
+
+| Key | Action |
+|-----|--------|
+| `↑`/`↓` | Navigate results |
+| `Enter` | Execute/open selected item |
+| Type normally | Search apps, files, and history |
+| `@pattern` | Grep file contents |
+| `/pattern` | Find files by name |
+| `:command` | Run shell command |
+
+### Files View (Vim-style)
+
+| Key | Action |
+|-----|--------|
+| `j`/`k` or `↑`/`↓` | Navigate files |
+| `l`/`Enter` or `→` | Open file / Enter directory |
+| `h`/`Backspace` or `←` | Go to parent directory |
+| `r` | Refresh directory |
+| `c` | Command mode (run shell commands) |
+
+### Clipboard View
+
+| Key | Action |
+|-----|--------|
+| `j`/`k` or `↑`/`↓` | Navigate entries |
+| `Enter` | Copy to clipboard |
+| `p` | Pin/unpin entry |
+| `d` | Delete entry |
+
+<Note>
+For a complete list of keyboard shortcuts, see the [Keyboard Shortcuts reference](/guides/keyboard-shortcuts).
+</Note>
+
+## Common Workflows
+
+### Launch an Application
+
+1. Press `Super+Space`
+2. Type the app name (fuzzy matching works: `firef` → Firefox)
+3. Press `Enter`
+
+### Find and Open a File
+
+1. Press `Super+Space`
+2. Type `/filename` to search by name
+3. Press `↑`/`↓` to select, `Enter` to open
+
+Or use the Files view (`Ctrl+2`) for browsing.
+
+### Search Code for a Pattern
+
+1. Press `Super+Space`
+2. Type `@pattern` (e.g., `@TODO` or `@import React`)
+3. Browse results and press `Enter` to open the file
+
+### Run a Quick Command
+
+1. Press `Super+Space`
+2. Type `:command` (e.g., `:git status`)
+3. Press `Enter` to execute
+
+### Restore a Clipboard Entry
+
+1. Press `Super+Space`
+2. Press `Ctrl+3` to open Clipboard view
+3. Use `↑`/`↓` to find the entry
+4. Press `Enter` to copy it
+
+## Tips for Power Users
+
+<CardGroup cols={2}>
+  <Card title="Configure Search Exclusions" icon="filter">
+    Create `~/.config/filecast/search.yaml` to exclude directories like `node_modules`, `.git`, `target`, etc. from grep and file searches.
+  </Card>
+
+  <Card title="Install ripgrep and fd" icon="bolt">
+    Install `rg` and `fd` for 10-100x faster searches. Filecast automatically uses them when available.
+  </Card>
+
+  <Card title="Pin Important Clipboard Items" icon="thumbtack">
+    Use `p` in Clipboard view to pin frequently used snippets, commands, or text. Pinned items never expire.
+  </Card>
+
+  <Card title="Use Command History" icon="clock-rotate-left">
+    When typing commands with `:`, press `↑`/`↓` to browse command history for quick re-execution.
+  </Card>
+</CardGroup>
+
+## What's Next?
+
+<CardGroup cols={2}>
+  <Card title="Search Syntax" icon="magnifying-glass" href="/guides/search-syntax">
+    Master advanced search patterns and filters
+  </Card>
+  <Card title="Keyboard Shortcuts" icon="keyboard" href="/guides/keyboard-shortcuts">
+    Complete reference for all keyboard shortcuts
+  </Card>
+  <Card title="Window Position" icon="gear" href="/configuration/window-position">
+    Customize window placement to fit your workflow
+  </Card>
+  <Card title="File Browser" icon="folder-open" href="/guides/file-browser">
+    Deep dive into the file browser features
+  </Card>
+</CardGroup>

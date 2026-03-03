@@ -1,0 +1,273 @@
+---
+title: Installation
+description: Install Filecast on Debian/Ubuntu or build from source
+---
+
+Filecast provides two installation methods: pre-built `.deb` packages for Debian/Ubuntu systems, or building from source with Cargo.
+
+## Install from .deb Package (Recommended)
+
+<Steps>
+  <Step title="Download the latest release">
+    Download the latest `.deb` package from the [GitHub Releases page](https://github.com/ThembinkosiThemba/filecast/releases).
+
+    ```bash
+    # Download the latest release (replace version number)
+    wget https://github.com/ThembinkosiThemba/filecast/releases/download/v0.2.1/filecast_0.2.1_amd64.deb
+    ```
+  </Step>
+
+  <Step title="Install the package">
+    Install the `.deb` package using `dpkg`:
+
+    ```bash
+    sudo dpkg -i filecast_*.deb
+    ```
+
+    <Note>
+    If you encounter dependency errors, run `sudo apt-get install -f` to automatically install missing dependencies.
+    </Note>
+  </Step>
+
+  <Step title="Verify installation">
+    Verify Filecast is installed:
+
+    ```bash
+    which filecast
+    ```
+
+    Expected output:
+    ```
+    /usr/bin/filecast
+    ```
+  </Step>
+
+  <Step title="Launch Filecast">
+    Start Filecast from your terminal:
+
+    ```bash
+    filecast
+    ```
+
+    The launcher window will appear. Press `Super+Space` to toggle it from anywhere.
+  </Step>
+</Steps>
+
+### What Gets Installed
+
+The `.deb` package installs:
+- Binary: `/usr/bin/filecast`
+- Icon: `/usr/share/icons/hicolor/128x128/apps/filecast.png`
+- Desktop entry: `/usr/share/applications/filecast.desktop`
+- Documentation: `/usr/share/doc/filecast/README.md`
+
+## Build from Source
+
+Building from source gives you the latest development version and allows customization.
+
+<Steps>
+  <Step title="Install Rust">
+    If you don't have Rust installed, install it via rustup:
+
+    ```bash
+    curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
+    source $HOME/.cargo/env
+    ```
+
+    Verify installation:
+    ```bash
+    rustc --version
+    ```
+  </Step>
+
+  <Step title="Clone the repository">
+    Clone the Filecast repository:
+
+    ```bash
+    git clone https://github.com/ThembinkosiThemba/filecast.git
+    cd filecast
+    ```
+  </Step>
+
+  <Step title="Build the binary">
+    Build the release binary with cargo:
+
+    ```bash
+    cargo build --release
+    ```
+
+    This compiles an optimized binary to `target/release/filecast`.
+
+    <Note>
+    The first build may take several minutes as Cargo downloads and compiles all dependencies.
+    </Note>
+  </Step>
+
+  <Step title="Run or install the binary">
+    You can run Filecast directly:
+
+    ```bash
+    ./target/release/filecast
+    ```
+
+    Or install it to your system:
+
+    ```bash
+    sudo cp target/release/filecast /usr/local/bin/
+    ```
+
+    Verify:
+    ```bash
+    filecast --version
+    ```
+  </Step>
+</Steps>
+
+### Build Your Own .deb Package
+
+You can build a `.deb` package yourself:
+
+```bash
+cargo install cargo-deb
+cargo deb
+```
+
+The `.deb` file will be created in `target/debian/`.
+
+## System Dependencies
+
+<Warning>
+Filecast requires X11 for global hotkey support. Wayland is not currently supported.
+</Warning>
+
+Filecast has minimal system dependencies. The Rust build includes most dependencies statically.
+
+### Required
+
+- **Linux with X11** - For global hotkey registration (`Super+Space`)
+- **Basic system libraries** - Usually pre-installed (glibc, X11 libraries)
+
+### Optional Dependencies
+
+Install these for enhanced performance:
+
+<CodeGroup>
+```bash Debian/Ubuntu
+sudo apt-get install ripgrep fd-find
+```
+
+```bash Arch Linux
+sudo pacman -S ripgrep fd
+```
+
+```bash Fedora
+sudo dnf install ripgrep fd-find
+```
+</CodeGroup>
+
+**ripgrep (`rg`)**: Faster grep searches (10-100x faster than GNU grep)
+
+**fd**: Faster file finding with automatic gitignore support
+
+Filecast automatically detects and uses these tools when available. Without them, Filecast falls back to standard search methods.
+
+## Configuration Files
+
+On first launch, Filecast creates a configuration directory:
+
+```
+~/.config/filecast/
+├── history.db         # SQLite database for clipboard, command, and app launch history
+├── settings.conf      # Window position and UI settings
+└── search.yaml        # Search exclusion patterns (optional)
+```
+
+### Search Exclusions
+
+Create `~/.config/filecast/search.yaml` to exclude directories from searches:
+
+```yaml
+exclusions:
+  - node_modules
+  - .git
+  - target
+  - dist
+  - build
+  - .cache
+```
+
+Filecast skips these directories in grep and file find operations.
+
+## Autostart (Optional)
+
+To launch Filecast automatically on login:
+
+<Steps>
+  <Step title="Create autostart directory">
+    ```bash
+    mkdir -p ~/.config/autostart
+    ```
+  </Step>
+
+  <Step title="Create desktop entry">
+    ```bash
+    cat > ~/.config/autostart/filecast.desktop << 'EOF'
+    [Desktop Entry]
+    Type=Application
+    Name=Filecast
+    Exec=/usr/bin/filecast
+    Hidden=false
+    NoDisplay=false
+    X-GNOME-Autostart-enabled=true
+    Comment=Fast application launcher
+    EOF
+    ```
+  </Step>
+
+  <Step title="Log out and log back in">
+    Filecast will now start automatically on login.
+  </Step>
+</Steps>
+
+## Troubleshooting
+
+### Global Hotkey Not Working
+
+If `Super+Space` doesn't toggle Filecast:
+
+1. **Check if X11 is running**:
+   ```bash
+   echo $XDG_SESSION_TYPE
+   ```
+   Should output `x11`. If it shows `wayland`, global hotkeys won't work.
+
+2. **Check for conflicting keybindings**: Some desktop environments bind `Super+Space` by default. Disable conflicting shortcuts in your system settings.
+
+### Filecast Won't Start
+
+If Filecast fails to launch:
+
+1. **Run from terminal** to see error messages:
+   ```bash
+   filecast
+   ```
+
+2. **Check dependencies**:
+   ```bash
+   ldd /usr/bin/filecast
+   ```
+   Look for "not found" in the output.
+
+### Permission Errors
+
+If you see permission errors accessing configuration:
+
+```bash
+chmod -R 755 ~/.config/filecast
+```
+
+## Next Steps
+
+<Card title="Quick Start Guide" icon="rocket" href="/quickstart">
+  Learn how to use Filecast effectively in under 2 minutes
+</Card>

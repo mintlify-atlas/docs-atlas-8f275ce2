@@ -1,0 +1,381 @@
+---
+title: Keyboard Shortcuts
+description: Complete reference of all keyboard shortcuts in Filecast
+---
+
+Filecast is designed for keyboard-driven workflow. This page documents all available shortcuts across different views.
+
+## Global Shortcuts
+
+These shortcuts work from anywhere in Filecast.
+
+| Shortcut | Action | Context |
+|----------|--------|----------|
+| `Super+Space` | Toggle Filecast window | System-wide (X11) |
+| `Ctrl+1` | Switch to Search view | Any view |
+| `Ctrl+2` | Switch to Files view | Any view |
+| `Ctrl+3` | Switch to Clipboard view | Any view |
+| `Ctrl+4` | Switch to Settings view | Any view |
+| `Tab` | Cycle to next view | Any view (when not in input field) |
+| `Escape` | Clear / Unfocus / Hide / Back | Context-dependent |
+
+<Note>
+`Super+Space` is the global hotkey to show/hide Filecast from anywhere on your system. It requires X11 on Linux.
+</Note>
+
+### Escape Key Behavior
+
+From `src/ui/launcher.rs:112-130`, the `Escape` key has context-aware behavior:
+
+<Tabs>
+  <Tab title="Search View">
+    1. **Clear search query** - If search has text
+    2. **Unfocus input** - If search is focused (empty)
+    3. **Hide window** - If search is unfocused
+
+    ```text
+    "firefox" typed → Escape → Clear to ""
+    "" focused      → Escape → Unfocus input
+    "" unfocused    → Escape → Hide Filecast
+    ```
+  </Tab>
+
+  <Tab title="Other Views">
+    Returns to Search view:
+    ```text
+    Files/Clipboard/Settings → Escape → Search view
+    ```
+  </Tab>
+
+  <Tab title="Command Mode">
+    Exits command mode:
+    ```text
+    Files (command mode) → Escape → Exit to normal Files view
+    ```
+  </Tab>
+</Tabs>
+
+## Search View
+
+### Navigation
+
+| Shortcut | Action | Source |
+|----------|--------|--------|
+| `↑` | Navigate up in results | `launcher.rs:177` |
+| `↓` | Navigate down in results | `launcher.rs:171` |
+| `Enter` | Execute selected result | `launcher.rs:180` |
+
+### Search Modes
+
+No shortcuts - use prefixes in the search input:
+
+| Prefix | Mode | Example |
+|--------|------|----------|
+| (none) | Fuzzy search | `firefox` |
+| `@` | Grep file contents | `@TODO` |
+| `/` | Find files by name | `/config` |
+| `:` | Run shell command | `:ls -la` |
+
+### Recent Items Navigation
+
+When search is empty and unfocused, navigate recent files, commands, and apps:
+
+| Shortcut | Action | Source |
+|----------|--------|--------|
+| `↓` or `j` | Navigate down | `launcher.rs:196` |
+| `↑` or `k` | Navigate up | `launcher.rs:199` |
+| `Enter` | Open recent item | `launcher.rs:204` |
+
+## Files View
+
+### Vim-Style Navigation
+
+Filecast supports both arrow keys and vim bindings.
+
+| Shortcut | Action | Source |
+|----------|--------|--------|
+| `↓` or `j` | Move selection down | `launcher.rs:261` |
+| `↑` or `k` | Move selection up | `launcher.rs:267` |
+| `→` or `l` or `Enter` | Open file / Enter directory | `launcher.rs:278` |
+| `←` or `h` or `Backspace` | Go to parent directory | `launcher.rs:294` |
+| `r` | Refresh current directory | `launcher.rs:303` |
+| `c` | Enter command mode | `launcher.rs:307` |
+
+<Tip>
+Vim users will feel at home with `hjkl` navigation:
+- `h` = left (parent directory)
+- `j` = down
+- `k` = up
+- `l` = right (open/enter)
+</Tip>
+
+### Command Mode
+
+When command mode is active (`c` key pressed):
+
+| Shortcut | Action | Source |
+|----------|--------|--------|
+| `Enter` | Execute command | `launcher.rs:565` |
+| `Escape` | Exit command mode | `launcher.rs:237` |
+| `Tab` | Complete file/directory name | `launcher.rs:242` |
+| `↑` | Browse command history (when input empty) | `launcher.rs:580` |
+| `↓` | Browse command history (when input empty) | `launcher.rs:587` |
+
+<Note>
+`Tab` key is consumed in command mode to prevent accidental view switching during completion.
+</Note>
+
+## Clipboard View
+
+| Shortcut | Action | Source |
+|----------|--------|--------|
+| `↓` or `j` | Navigate down | `launcher.rs:316` |
+| `↑` or `k` | Navigate up | `launcher.rs:321` |
+| `Enter` | Copy entry to clipboard | `launcher.rs:325` |
+| `p` | Pin / Unpin entry | `launcher.rs:331` |
+| `d` or `x` | Delete entry | `launcher.rs:338` |
+
+<CardGroup cols={2}>
+  <Card title="Pin Important Entries" icon="thumbtack">
+    Press `p` to exempt entries from 24-hour expiry
+  </Card>
+  <Card title="Quick Delete" icon="trash">
+    Use `d` or `x` to remove unwanted entries
+  </Card>
+</CardGroup>
+
+## Settings View
+
+No special keyboard shortcuts in Settings view. Use:
+- Mouse or Tab to navigate options
+- Enter to confirm text inputs
+- Click to select window position
+
+## View Switching
+
+From `src/ui/launcher.rs:132-166`:
+
+<Tabs>
+  <Tab title="Ctrl+Number">
+    Direct view switching:
+
+    | Shortcut | View |
+    |----------|------|
+    | `Ctrl+1` | Search |
+    | `Ctrl+2` | Files |
+    | `Ctrl+3` | Clipboard |
+    | `Ctrl+4` | Settings |
+  </Tab>
+
+  <Tab title="Tab Key">
+    Cycle through views:
+
+    ```text
+    Search → Files → Clipboard → Settings → Search ...
+    ```
+
+    Only works when **not** in an input field.
+  </Tab>
+</Tabs>
+
+## Mouse Shortcuts
+
+While Filecast is keyboard-focused, mouse interaction is supported:
+
+### All Views
+
+| Action | Result |
+|--------|--------|
+| Click tab | Switch to that view |
+| Click minimize button | Hide window |
+| Click close button | Quit Filecast |
+
+### Search View
+
+| Action | Result |
+|--------|--------|
+| Click result | Execute result |
+| Click recent item | Open file/app or run command |
+
+### Files View
+
+| Action | Result |
+|--------|--------|
+| Click file | Open file |
+| Click directory | Enter directory |
+| Hover item | Highlight item |
+| Click command in history | Execute command |
+
+### Clipboard View
+
+| Action | Result |
+|--------|--------|
+| Click entry | Copy to clipboard |
+| Hover entry | Highlight entry |
+
+## Context-Specific Shortcuts
+
+### Search Input Focus
+
+From `src/ui/launcher.rs:1068-1100`:
+
+| Shortcut | Action | Condition |
+|----------|--------|----------|
+| `Enter` | Execute search result | Search has results, input unfocused |
+| `Enter` | Execute command | Search starts with `:` |
+
+### Navigation with Auto-Scroll
+
+From `src/ui/launcher.rs:174-178`, navigation shortcuts trigger auto-scrolling to keep the selected item visible:
+
+```rust
+if i.key_pressed(Key::ArrowDown) {
+    // ... update selection ...
+    self.scroll_to_selected = true;  // Ensures item is visible
+}
+```
+
+This applies to:
+- Search results navigation
+- Files list navigation  
+- Clipboard history navigation
+- Command history navigation
+
+## Quick Reference Card
+
+### Search View
+
+```text
+🔍 Search View
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Type        Fuzzy search
+@pattern    Grep contents
+/name       Find files
+:command    Run command
+↑↓          Navigate results
+Enter       Execute
+Escape      Clear/Unfocus/Hide
+```
+
+### Files View
+
+```text
+📁 Files View
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+↑↓ or jk    Navigate
+→l Enter    Open/Enter
+←h Bksp     Parent dir
+r           Refresh
+c           Command mode
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Command Mode:
+Enter       Execute
+Tab         Complete
+↑↓          History
+Escape      Exit
+```
+
+### Clipboard View
+
+```text
+📋 Clipboard View
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+↑↓ or jk    Navigate
+Enter       Copy to clipboard
+p           Pin/Unpin
+d or x      Delete
+```
+
+### Global
+
+```text
+🌍 Global
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Super+Space Toggle window
+Ctrl+1/2/3/4 Switch views
+Tab         Next view
+Escape      Back/Clear/Hide
+```
+
+## Tips for Efficient Navigation
+
+<AccordionGroup>
+  <Accordion title="Stay on the keyboard">
+    Filecast is designed for keyboard-only operation. Learn these shortcuts to avoid reaching for the mouse:
+    - `Ctrl+1/2/3/4` for instant view switching
+    - `jk` or `↑↓` for navigation
+    - `Enter` to execute/open
+    - `Escape` to go back
+  </Accordion>
+
+  <Accordion title="Master the Escape key">
+    `Escape` is context-aware:
+    - In Search: clears → unfocuses → hides
+    - In Files/Clipboard/Settings: returns to Search
+    - In command mode: exits command mode
+    
+    It always "goes back" or "cancels" in the most logical way.
+  </Accordion>
+
+  <Accordion title="Use Tab for completion, Ctrl+Number for views">
+    - `Tab` in command mode = file completion
+    - `Tab` outside inputs = cycle views
+    - `Ctrl+1/2/3/4` = direct view access
+    
+    Know when to use which!
+  </Accordion>
+
+  <Accordion title="Vim users: hjkl is home">
+    If you use vim, you'll find Filecast familiar:
+    - `h` = left (parent)
+    - `j` = down
+    - `k` = up
+    - `l` = right (open)
+    
+    Works in Files and Clipboard views.
+  </Accordion>
+
+  <Accordion title="Super+Space is your best friend">
+    Get used to `Super+Space` for instant access to Filecast from anywhere. It's the fastest way to:
+    - Launch apps
+    - Search files
+    - Run commands
+    - Access clipboard history
+  </Accordion>
+</AccordionGroup>
+
+## Customization
+
+<Warning>
+Keyboard shortcuts are currently **not customizable**. They are hardcoded in the source at `src/ui/launcher.rs`.
+
+The global hotkey `Super+Space` is defined in `src/main.rs` during X11 hotkey registration.
+</Warning>
+
+If you need different shortcuts, you'll need to:
+1. Modify the source code in `src/ui/launcher.rs`
+2. Change the global hotkey in `src/main.rs`
+3. Rebuild Filecast from source
+
+See the [installation guide](/installation) for instructions on building from source.
+
+## Platform Notes
+
+### Linux (X11)
+
+From README.md:
+- Global hotkey (`Super+Space`) requires X11
+- Tested on Ubuntu/Debian-based distributions
+- Uses `xdg-open` for file opening
+
+### Wayland
+
+<Warning>
+Global hotkey functionality may not work on Wayland. Filecast is designed for X11.
+</Warning>
+
+## Related
+
+- [Search Syntax](/guides/search-syntax) - Learn search modes
+- [File Browser](/guides/file-browser) - Master file navigation  
+- [Clipboard History](/guides/clipboard) - Manage clipboard entries

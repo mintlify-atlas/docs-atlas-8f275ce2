@@ -1,0 +1,121 @@
+---
+title: System Requirements
+description: Hardware and software requirements for running Filecast
+---
+
+## Operating System
+
+<Warning>
+Filecast requires **Linux with X11** for global hotkey functionality. Wayland is not currently supported.
+</Warning>
+
+The global hotkey system (`Super+Space`) uses the `global-hotkey` crate which relies on X11 for cross-window keyboard event handling. Without X11, the launcher will not be able to capture the hotkey when other applications are focused.
+
+## Required Dependencies
+
+### Runtime Requirements
+
+<Note>
+Most dependencies are statically compiled into the binary and don't require separate installation.
+</Note>
+
+Filecast is built with Rust and uses the following core libraries:
+
+| Dependency | Version | Purpose |
+|------------|---------|----------|
+| **egui** | 0.30 | Immediate mode GUI framework |
+| **eframe** | 0.30 | Native windowing wrapper for egui |
+| **global-hotkey** | 0.6 | Global hotkey registration (requires X11) |
+| **arboard** | 3.4 | Clipboard history tracking |
+| **rusqlite** | 0.38.0 | SQLite database for clipboard/search history |
+| **freedesktop-desktop-entry** | 0.7 | Parsing .desktop files for app launching |
+
+### Font Requirements
+
+<Tip>
+Filecast uses NotoColorEmoji for emoji rendering in the interface.
+</Tip>
+
+The application expects the following font to be installed:
+
+```
+/usr/share/fonts/truetype/noto/NotoColorEmoji.ttf
+```
+
+On Debian/Ubuntu systems, install with:
+
+```bash
+sudo apt install fonts-noto-color-emoji
+```
+
+**Why this is needed:** The font is loaded at runtime (src/main.rs:120) to support emoji rendering in file names, clipboard entries, and UI elements.
+
+## Optional Dependencies
+
+### ripgrep (rg)
+
+```bash
+sudo apt install ripgrep
+```
+
+**Purpose:** Significantly faster grep search when using the `@pattern` syntax in Search view.
+
+**What happens without it:** Filecast will fall back to standard grep, which is slower for large codebases.
+
+### fd
+
+```bash
+sudo apt install fd-find
+```
+
+**Purpose:** Faster file finding when using the `/pattern` syntax in Search view.
+
+**What happens without it:** Filecast will fall back to standard find commands, which are slower across large directory trees.
+
+## Build Requirements
+
+If building from source, you'll need:
+
+| Requirement | Version | Purpose |
+|------------|---------|----------|
+| **Rust** | 2024 edition | Compiling the application |
+| **Cargo** | Latest | Build system and dependency management |
+| **X11 development headers** | - | Required for global-hotkey compilation |
+
+On Debian/Ubuntu:
+
+```bash
+sudo apt install build-essential libx11-dev libxdo-dev
+```
+
+## Storage Requirements
+
+### Configuration Directory
+
+Filecast stores configuration and data in:
+
+```
+~/.config/filecast/
+```
+
+**Files created:**
+- `settings.conf` - Window position and UI preferences
+- `search.yaml` - Search exclusion patterns for directories
+- `history.db` - SQLite database for clipboard and search history
+
+**Space required:** Typically < 10 MB, depending on clipboard history size.
+
+## Hardware Requirements
+
+<Note>
+Filecast is lightweight and runs efficiently on minimal hardware.
+</Note>
+
+**Minimum:**
+- 512 MB RAM
+- Any modern x86_64 or ARM64 processor
+- 50 MB disk space
+
+**Recommended:**
+- 1 GB RAM for smooth operation with large file trees
+- SSD for faster file search and grep operations

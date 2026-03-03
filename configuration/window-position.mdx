@@ -1,0 +1,205 @@
+---
+title: Window Position
+description: Configure where Filecast appears on your screen
+---
+
+## Overview
+
+Filecast allows you to customize where the launcher window appears on your screen. You can choose from predefined positions or set a custom location using pixel coordinates.
+
+## Configuration File
+
+Window position settings are stored in:
+
+```
+~/.config/filecast/settings.conf
+```
+
+This file is created automatically when you first run Filecast or change settings in the Settings view.
+
+## Available Positions
+
+Filecast supports the following window positions:
+
+<CardGroup cols={2}>
+  <Card title="Top Center" icon="arrow-up">
+    Default position. Window appears centered horizontally at the top of the screen.
+  </Card>
+  <Card title="Center" icon="circle">
+    Window appears in the center of the screen, both horizontally and vertically.
+  </Card>
+  <Card title="Top Left" icon="arrow-up-left">
+    Window appears in the top-left corner with a 30px margin.
+  </Card>
+  <Card title="Top Right" icon="arrow-up-right">
+    Window appears in the top-right corner with a 30px margin.
+  </Card>
+  <Card title="Bottom Center" icon="arrow-down">
+    Window appears centered horizontally at the bottom of the screen.
+  </Card>
+  <Card title="Bottom Left" icon="arrow-down-left">
+    Window appears in the bottom-left corner with a 30px margin.
+  </Card>
+  <Card title="Bottom Right" icon="arrow-down-right">
+    Window appears in the bottom-right corner with a 30px margin.
+  </Card>
+  <Card title="Custom" icon="location-dot">
+    Specify exact pixel coordinates for the window position.
+  </Card>
+</CardGroup>
+
+## Configuration Format
+
+The `settings.conf` file uses a simple key-value format:
+
+<CodeGroup>
+```conf Top Center (Default)
+# Files Launcher Settings
+position=top_center
+width=600
+height=400
+```
+
+```conf Center
+# Files Launcher Settings
+position=center
+width=600
+height=400
+```
+
+```conf Bottom Right
+# Files Launcher Settings
+position=bottom_right
+width=600
+height=400
+```
+
+```conf Custom Position
+# Files Launcher Settings
+position=custom:100,200
+width=600
+height=400
+```
+</CodeGroup>
+
+## Position Values
+
+Use these exact values in the configuration file:
+
+| Position | Configuration Value |
+|----------|--------------------|
+| Top Center | `top_center` |
+| Center | `center` |
+| Top Left | `top_left` |
+| Top Right | `top_right` |
+| Bottom Center | `bottom_center` |
+| Bottom Left | `bottom_left` |
+| Bottom Right | `bottom_right` |
+| Custom | `custom:X,Y` |
+
+<Note>
+  The default position is `top_center`, which mimics the behavior of Spotlight and Raycast.
+</Note>
+
+## Configuring via Settings View
+
+The easiest way to change window position is through the Settings view:
+
+<Steps>
+  <Step title="Open Settings">
+    Press `Ctrl+4` or navigate to the Settings view from Filecast.
+  </Step>
+  <Step title="Select Position">
+    Choose your preferred window position from the dropdown menu.
+  </Step>
+  <Step title="Apply Changes">
+    The position is saved automatically to `~/.config/filecast/settings.conf`.
+  </Step>
+  <Step title="Restart Filecast">
+    Close and reopen Filecast (or press `Super+Space` twice) to apply the new position.
+  </Step>
+</Steps>
+
+## Custom Positioning
+
+For precise control, you can set custom pixel coordinates:
+
+```conf
+position=custom:100,200
+```
+
+This places the window at X=100px, Y=200px from the top-left corner of your screen.
+
+<Warning>
+  Custom positions don't include automatic margin handling. Ensure your coordinates keep the window visible on screen.
+</Warning>
+
+## Window Dimensions
+
+You can also customize the window size:
+
+```conf
+position=top_center
+width=800
+height=500
+```
+
+- **Default width**: 600px
+- **Default height**: 400px
+
+<Note>
+  Window dimensions are applied along with the position. The position calculation accounts for the window size to ensure proper alignment.
+</Note>
+
+## Screen Detection
+
+Filecast automatically detects your screen resolution using `xrandr` on X11 systems. This ensures positions like "center" and "top_center" work correctly regardless of your display setup.
+
+<Accordion title="Implementation Details">
+  The window position calculation is handled in `src/core/settings.rs:159`. Predefined positions include a 30px margin from screen edges, while the center position calculates the exact midpoint of your display.
+
+  If screen detection fails, Filecast falls back to assuming a 1920x1080 resolution.
+</Accordion>
+
+## Example Configurations
+
+<CodeGroup>
+```conf Minimal (Defaults)
+# Files Launcher Settings
+position=top_center
+width=600
+height=400
+```
+
+```conf Larger Window
+# Files Launcher Settings
+position=center
+width=900
+height=600
+```
+
+```conf Bottom Corner
+# Files Launcher Settings
+position=bottom_right
+width=500
+height=350
+```
+</CodeGroup>
+
+## Troubleshooting
+
+<AccordionGroup>
+  <Accordion title="Window appears in wrong position">
+    1. Verify the `position` value in `~/.config/filecast/settings.conf` matches the expected format
+    2. Ensure there are no typos (e.g., `top-center` instead of `top_center`)
+    3. Restart Filecast completely to apply changes
+  </Accordion>
+
+  <Accordion title="Custom position goes off-screen">
+    Check your screen resolution and adjust the custom coordinates. Remember that custom positions are absolute pixel values from the top-left corner.
+  </Accordion>
+
+  <Accordion title="Settings not persisting">
+    Ensure the `~/.config/filecast/` directory exists and is writable. Filecast creates this automatically, but file permissions could prevent writing.
+  </Accordion>
+</AccordionGroup>

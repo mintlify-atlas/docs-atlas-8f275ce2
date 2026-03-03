@@ -1,0 +1,330 @@
+---
+title: Search Syntax
+description: Master Filecast's powerful search modes and fuzzy matching
+---
+
+Filecast provides four distinct search modes, each optimized for different use cases. Understanding these modes will help you find what you need quickly.
+
+## Search Modes Overview
+
+<CardGroup cols={2}>
+  <Card title="Fuzzy Search" icon="magnifying-glass">
+    Smart matching for apps and files
+  </Card>
+  <Card title="Grep Search" icon="file-magnifying-glass">
+    Search inside file contents
+  </Card>
+  <Card title="Find Files" icon="folder-magnifying-glass">
+    Find files by name pattern
+  </Card>
+  <Card title="Command Mode" icon="terminal">
+    Execute shell commands
+  </Card>
+</CardGroup>
+
+## Fuzzy Search (Default)
+
+When you type without a prefix, Filecast performs intelligent fuzzy matching across applications and files.
+
+<Tabs>
+  <Tab title="Basic Usage">
+    Simply start typing - no prefix needed:
+
+    ```bash
+    firefox          # Finds "Firefox" browser
+    vsc              # Finds "Visual Studio Code"
+    Documents        # Finds directories and files
+    ```
+
+    Fuzzy search works across:
+    - Application names
+    - Application descriptions
+    - File names
+    - Recent files (with +10 score bonus)
+  </Tab>
+  
+  <Tab title="Algorithm">
+    The fuzzy matching algorithm (from `src/core/search.rs:114`) uses a scoring system:
+
+    | Match Type | Score | Example |
+    |------------|-------|----------|
+    | Exact match | 100 | `firefox` → "firefox" |
+    | Prefix match | 90 | `fire` → "firefox" |
+    | Contains | 70 | `fox` → "firefox" |
+    | Character sequence | 40-65 | `ffx` → "firefox" |
+
+    **Bonuses:**
+    - **+5 per consecutive character** - Rewards contiguous matches
+    - **+10 for word boundaries** - Matches at the start of words rank higher
+    - **+10 for recent files** - Recently accessed files get priority
+  </Tab>
+
+  <Tab title="Source Code">
+    The fuzzy scoring implementation from `src/core/search.rs:114-163`:
+
+    ```rust
+    pub fn fuzzy_score(query: &str, text: &str) -> u32 {
+        let query_lower = query.to_lowercase();
+        let text_lower = text.to_lowercase();
+
+        // Exact match: highest score
+        if text_lower == query_lower {
+            return 100;
+        }
+
+        // Prefix match: very high score
+        if text_lower.starts_with(&query_lower) {
+            return 90;
+        }
+
+        // Substring match: high score
+        if text_lower.contains(&query_lower) {
+            return 70;
+        }
+
+        // Character sequence matching with bonuses
+        let mut consecutive_bonus = 0;
+        // ... (see source for full implementation)
+    }
+    ```
+  </Tab>
+</Tabs>
+
+## Grep Search
+
+Search inside file contents using the `@` prefix. Filecast uses `ripgrep` (rg) if available, falling back to standard `grep`.
+
+### Basic Usage
+
+```bash
+@TODO              # Find all TODO comments
+@function_name     # Find function definitions
+@import.*React     # Regex: find React imports
+```
+
+### How It Works
+
+From `src/core/search.rs:246-290`, grep search:
+
+1. **Tries ripgrep first** - Faster, better performance
+2. **Falls back to grep** - If ripgrep not installed
+3. **Applies exclusions** - Respects `~/.config/filecast/search.yaml`
+4. **Limits results** - Maximum 15 matches displayed
+5. **Case insensitive** - Uses `-i` flag automatically
+
+<CodeGroup>
+```bash ripgrep command
+rg -n -i --max-count 20 --glob '!node_modules/**' pattern .
+```
+
+```bash grep fallback
+grep -r -n -i --exclude-dir=node_modules pattern .
+```
+</CodeGroup>
+
+### Result Format
+
+Grep results show:
+- **Icon:** 🔎
+- **Filename with line number:** `app.rs:42`
+- **Content preview:** First 80 characters of the matching line
+- **Full path** in description
+
+<Tip>
+Grep search is great for finding TODOs, error messages, function calls, or any text pattern across your codebase.
+</Tip>
+
+## Find Files
+
+Find files by name using the `/` prefix. Uses `fd` if available, falling back to `find`.
+
+### Basic Usage
+
+```bash
+/config            # Find files containing "config"
+/README            # Find README files
+/.env              # Find .env files
+/main.rs           # Find main.rs anywhere
+```
+
+### How It Works
+
+From `src/core/search.rs:292-345`, file finding:
+
+1. **Tries fd first** - Modern, faster alternative
+2. **Falls back to find** - Standard Unix find command
+3. **Case insensitive** - Matches regardless of case
+4. **Respects exclusions** - Skips directories in search config
+5. **Depth limit** - Searches up to 5 levels deep (find only)
+6. **Max results** - Returns up to 15 matches
+
+<CodeGroup>
+```bash fd command
+fd -i --max-results 20 --exclude node_modules pattern
+```
+
+```bash find fallback
+find . -maxdepth 5 -not -path '*node_modules*' -iname '*pattern*'
+```
+</CodeGroup>
+
+### File Icons
+
+Filecast displays contextual icons based on file extension (from `src/core/search.rs:347-373`):
+
+| Extension | Icon | Category |
+|-----------|------|----------|
+| `.rs`, `.py`, `.js`, `.ts` | 💻 | Code files |
+| `.png`, `.jpg`, `.svg` | 🖼️ | Images |
+| `.mp4`, `.mkv`, `.webm` | 🎬 | Videos |
+| `.mp3`, `.wav`, `.flac` | 🎵 | Audio |
+| `.pdf`, `.doc`, `.txt` | 📝 | Documents |
+| `.zip`, `.tar`, `.gz` | 📦 | Archives |
+| Directories | 📁 | Folders |
+
+## Command Mode
+
+Execute shell commands directly from the search bar using the `:` prefix.
+
+### Basic Usage
+
+```bash
+:ls -la            # List files in detail
+:git status        # Check git status
+:npm install       # Install packages
+:cargo build       # Build Rust project
+```
+
+### Behavior
+
+From `src/core/search.rs:179-184`:
+
+- Commands execute in the **current directory** (Files view)
+- Output is displayed in the UI
+- Commands are **saved to history**
+- Press `Enter` to execute
+- Press `Escape` to cancel
+
+<Note>
+Commands run synchronously and block the UI until completion. For long-running commands, consider using `&` or running them in a terminal.
+</Note>
+
+### Command History
+
+Executed commands are stored in the database and can be:
+- Recalled from history
+- Re-executed with one click
+- Browsed in the Files view command mode
+
+## Search Exclusions
+
+Control which directories are excluded from `@grep` and `/find` searches via `~/.config/filecast/search.yaml`.
+
+### Default Exclusions
+
+From `src/core/search_config.rs:11-27`, these directories are excluded by default:
+
+```yaml
+exclude_dirs:
+  - node_modules
+  - .next
+  - .git
+  - target
+  - dist
+  - build
+  - __pycache__
+  - .venv
+  - venv
+  - .cache
+```
+
+### Adding Custom Exclusions
+
+<Steps>
+  <Step title="Open Settings View">
+    Press `Ctrl+4` or click the Settings tab
+  </Step>
+  
+  <Step title="Add Directory Name">
+    In the "Search Exclusions" section, type the directory name (e.g., `tmp`)
+  </Step>
+  
+  <Step title="Save">
+    Press Enter or click `+`. Changes are saved automatically to `search.yaml`
+  </Step>
+</Steps>
+
+### How Exclusions Work
+
+From `src/core/search_config.rs:64-100`, exclusions are translated into tool-specific flags:
+
+<Tabs>
+  <Tab title="ripgrep (rg)">
+    ```bash
+    --glob '!node_modules/**' --glob '!.git/**'
+    ```
+  </Tab>
+  
+  <Tab title="fd">
+    ```bash
+    --exclude node_modules --exclude .git
+    ```
+  </Tab>
+  
+  <Tab title="grep">
+    ```bash
+    --exclude-dir=node_modules --exclude-dir=.git
+    ```
+  </Tab>
+  
+  <Tab title="find">
+    ```bash
+    -not -path '*node_modules*' -not -path '*.git*'
+    ```
+  </Tab>
+</Tabs>
+
+## Search Results Limit
+
+To maintain performance, Filecast limits search results:
+
+- **Fuzzy search:** Top 20 results (highest scores)
+- **Grep search:** 15 matches
+- **Find files:** 15 matches
+
+Results are scored and sorted by relevance (`src/core/search.rs:239`).
+
+## Tips
+
+<AccordionGroup>
+  <Accordion title="Use the right mode for the task">
+    - **Finding apps?** Use fuzzy search (no prefix)
+    - **Finding specific text?** Use `@grep`
+    - **Finding a file by name?** Use `/find`
+    - **Need to run a command?** Use `:command`
+  </Accordion>
+
+  <Accordion title="Fuzzy search is smart">
+    You don't need to type the full name. Try:
+    - `vsc` for Visual Studio Code
+    - `ff` for Firefox
+    - `doc` for Documents folder
+  </Accordion>
+
+  <Accordion title="Combine with keyboard navigation">
+    - Type your search
+    - Use `↑/↓` to navigate results
+    - Press `Enter` to select
+    - Press `Escape` to clear
+  </Accordion>
+
+  <Accordion title="Configure exclusions for your workflow">
+    If you work with specific frameworks or tools, add their build/cache directories to exclusions for faster searches.
+  </Accordion>
+</AccordionGroup>
+
+## Related
+
+- [Keyboard Shortcuts](/guides/keyboard-shortcuts) - Learn all available shortcuts
+- [File Browser](/guides/file-browser) - Navigate and manage files
+- [Search Exclusions](/configuration/search-exclusions) - Customize search exclusions

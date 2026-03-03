@@ -1,0 +1,303 @@
+---
+title: Search Exclusions
+description: Configure which directories to exclude from grep and find searches
+---
+
+## Overview
+
+Filecast allows you to exclude specific directories from search operations to improve performance and reduce noise in search results. This is particularly useful for excluding build artifacts, dependencies, and version control directories.
+
+## Configuration File
+
+Search exclusions are configured in:
+
+```
+~/.config/filecast/search.yaml
+```
+
+This file is created automatically with sensible defaults when you first run Filecast.
+
+## Affected Search Operations
+
+Exclusions apply to the following search features:
+
+<CardGroup cols={2}>
+  <Card title="Grep Search" icon="magnifying-glass">
+    Content search with `@pattern` - uses `rg` or `grep`
+  </Card>
+  <Card title="Find Files" icon="file-magnifying-glass">
+    Filename search with `/pattern` - uses `fd` or `find`
+  </Card>
+</CardGroup>
+
+## Default Exclusions
+
+Filecast ships with the following directories excluded by default:
+
+```yaml
+# Filecast Search Configuration
+# Add directories to exclude from @ (grep) and / (find) searches
+
+exclude_dirs:
+  - node_modules
+  - .next
+  - .git
+  - target
+  - dist
+  - build
+  - __pycache__
+  - .venv
+  - venv
+  - .cache
+```
+
+<Note>
+  These defaults cover common directories across JavaScript/TypeScript, Rust, Python, and other ecosystems.
+</Note>
+
+## Configuration Format
+
+The `search.yaml` file uses YAML syntax with a single `exclude_dirs` array:
+
+<CodeGroup>
+```yaml Basic Configuration
+exclude_dirs:
+  - node_modules
+  - .git
+  - target
+```
+
+```yaml Extended Configuration
+exclude_dirs:
+  - node_modules
+  - .next
+  - .git
+  - target
+  - dist
+  - build
+  - __pycache__
+  - .venv
+  - venv
+  - .cache
+  - vendor
+  - .idea
+  - .vscode
+```
+
+```yaml Minimal Configuration
+exclude_dirs:
+  - .git
+```
+</CodeGroup>
+
+## Adding Custom Exclusions
+
+To exclude additional directories, edit `~/.config/filecast/search.yaml`:
+
+<Steps>
+  <Step title="Open the configuration file">
+    ```bash
+    nano ~/.config/filecast/search.yaml
+    ```
+  </Step>
+  <Step title="Add directory names">
+    Add directory names to the `exclude_dirs` list. Each entry should be on its own line with a `-` prefix.
+    
+    ```yaml
+    exclude_dirs:
+      - node_modules
+      - .git
+      - my_custom_folder
+    ```
+  </Step>
+  <Step title="Save and test">
+    Save the file and test your searches. Changes take effect immediately - no restart required.
+  </Step>
+</Steps>
+
+<Warning>
+  Directory names are matched as-is. The exclusion `node_modules` will exclude any `node_modules` directory at any depth in the search path.
+</Warning>
+
+## How Exclusions Work
+
+Filecast translates your exclusions into the appropriate flags for each search tool:
+
+<Accordion title="ripgrep (rg)">
+  Exclusions are converted to `--glob` patterns:
+  
+  ```bash
+  rg --glob '!node_modules/**' --glob '!.git/**' pattern
+  ```
+  
+  See `src/core/search_config.rs:64` for implementation details.
+</Accordion>
+
+<Accordion title="fd">
+  Exclusions are converted to `--exclude` flags:
+  
+  ```bash
+  fd --exclude node_modules --exclude .git pattern
+  ```
+  
+  See `src/core/search_config.rs:72` for implementation details.
+</Accordion>
+
+<Accordion title="grep (fallback)">
+  Exclusions are converted to `--exclude-dir` flags:
+  
+  ```bash
+  grep --exclude-dir=node_modules --exclude-dir=.git pattern
+  ```
+  
+  See `src/core/search_config.rs:80` for implementation details.
+</Accordion>
+
+<Accordion title="find (fallback)">
+  Exclusions are converted to `-not -path` patterns:
+  
+  ```bash
+  find . -not -path '*node_modules*' -not -path '*.git*'
+  ```
+  
+  See `src/core/search_config.rs:88` for implementation details.
+</Accordion>
+
+## Common Exclusion Examples
+
+<AccordionGroup>
+  <Accordion title="JavaScript/TypeScript Projects">
+    ```yaml
+    exclude_dirs:
+      - node_modules
+      - .next
+      - dist
+      - build
+      - .cache
+      - coverage
+      - .turbo
+    ```
+  </Accordion>
+
+  <Accordion title="Rust Projects">
+    ```yaml
+    exclude_dirs:
+      - target
+      - .git
+      - .cargo
+    ```
+  </Accordion>
+
+  <Accordion title="Python Projects">
+    ```yaml
+    exclude_dirs:
+      - __pycache__
+      - .venv
+      - venv
+      - .pytest_cache
+      - .mypy_cache
+      - dist
+      - build
+      - *.egg-info
+    ```
+  </Accordion>
+
+  <Accordion title="Go Projects">
+    ```yaml
+    exclude_dirs:
+      - vendor
+      - .git
+      - bin
+    ```
+  </Accordion>
+
+  <Accordion title="Multi-Language Workspace">
+    ```yaml
+    exclude_dirs:
+      # JavaScript/TypeScript
+      - node_modules
+      - .next
+      - dist
+      - build
+      # Rust
+      - target
+      # Python
+      - __pycache__
+      - .venv
+      - venv
+      # Version Control
+      - .git
+      # IDEs
+      - .idea
+      - .vscode
+      # Build/Cache
+      - .cache
+    ```
+  </Accordion>
+</AccordionGroup>
+
+## Performance Considerations
+
+Excluding directories significantly improves search performance:
+
+<Check>**Faster searches**: Skip directories with thousands of files</Check>
+<Check>**Reduced noise**: Avoid matches in generated code or dependencies</Check>
+<Check>**Lower memory usage**: Fewer files to process and display</Check>
+
+<Note>
+  For example, excluding `node_modules` in a typical web project can reduce search time from several seconds to milliseconds.
+</Note>
+
+## YAML Format Requirements
+
+Ensure your `search.yaml` follows proper YAML syntax:
+
+```yaml
+# Comments start with #
+exclude_dirs:
+  - directory_name    # Each item starts with -
+  - another_dir       # Use spaces for indentation, not tabs
+```
+
+<Warning>
+  Invalid YAML syntax will cause Filecast to fall back to default exclusions. Check your syntax if exclusions aren't being applied.
+</Warning>
+
+## Troubleshooting
+
+<AccordionGroup>
+  <Accordion title="Exclusions not working">
+    1. Verify the YAML syntax is correct (use a YAML validator)
+    2. Check that the file path is exactly `~/.config/filecast/search.yaml`
+    3. Ensure directory names match exactly (case-sensitive)
+    4. Try restarting Filecast
+  </Accordion>
+
+  <Accordion title="Too many results in searches">
+    Add more exclusions to `exclude_dirs`. Check what directories are being searched and add unwanted ones to the exclusion list.
+  </Accordion>
+
+  <Accordion title="Configuration file not found">
+    Filecast creates `search.yaml` automatically on first run. If missing:
+    
+    ```bash
+    mkdir -p ~/.config/filecast
+    # Copy the default configuration from above
+    ```
+  </Accordion>
+
+  <Accordion title="Want to search excluded directories">
+    Excluded directories are skipped in `@` (grep) and `/` (find) searches. To search them, temporarily remove them from `exclude_dirs` or use the Files view to navigate directly and run commands with `c`.
+  </Accordion>
+</AccordionGroup>
+
+## Implementation Reference
+
+The search exclusion system is implemented in `src/core/search_config.rs`. Key functions:
+
+- `rg_exclude_args()` - Generate ripgrep flags (line 64)
+- `fd_exclude_args()` - Generate fd flags (line 72)
+- `grep_exclude_args()` - Generate grep flags (line 80)
+- `find_exclude_args()` - Generate find flags (line 88)
+
+The configuration is loaded automatically when Filecast starts and used for all search operations.

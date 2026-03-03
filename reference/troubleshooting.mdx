@@ -1,0 +1,342 @@
+---
+title: Troubleshooting
+description: Common issues and solutions for Filecast
+---
+
+## Global Hotkey Issues
+
+<Accordion title="Hotkey (Super+Space) not working">
+
+**Symptoms:** Pressing `Super+Space` does not show/hide Filecast.
+
+**Common causes:**
+
+1. **Not running X11**
+   
+   Filecast requires X11 for global hotkey support. Check your display server:
+   
+   ```bash
+   echo $XDG_SESSION_TYPE
+   ```
+   
+   If it shows `wayland`, you're not on X11. Switch to an X11 session from your login screen.
+
+2. **Hotkey conflict**
+   
+   Another application may have already registered `Super+Space`. Check your desktop environment's keyboard shortcuts settings.
+
+3. **Filecast not running**
+   
+   Verify the process is active:
+   
+   ```bash
+   pgrep -a filecast
+   ```
+
+**Solution:**
+
+- Switch to X11 session (required)
+- Disable conflicting keyboard shortcuts in System Settings
+- Restart Filecast after making changes
+
+</Accordion>
+
+<Accordion title="Hotkey registration fails on startup">
+
+**Error message:** `Failed to register hotkey`
+
+**Cause:** The global-hotkey library (version 0.6) cannot access X11 or the hotkey is already registered by another process.
+
+**Solution:**
+
+```bash
+# Kill any existing Filecast instances
+pkillall filecast
+
+# Check for other processes using the hotkey
+# Look for other launcher applications (Albert, Ulauncher, Rofi, etc.)
+ps aux | grep -E "albert|ulauncher|rofi"
+
+# Restart Filecast
+filecast
+```
+
+</Accordion>
+
+## Clipboard Tracking Issues
+
+<Accordion title="Clipboard history not tracking changes">
+
+**Symptoms:** Copied text doesn't appear in the Clipboard view (Ctrl+3).
+
+**Cause:** Filecast uses the `arboard` library (v3.4) which requires X11 clipboard access.
+
+**Solution:**
+
+1. **Verify X11 session:** Same as hotkey issues above
+
+2. **Check clipboard manager conflicts:**
+   
+   If you have another clipboard manager running (like CopyQ, Clipman), they may interfere:
+   
+   ```bash
+   ps aux | grep -E "copyq|clipman|clipit"
+   ```
+
+3. **Restart Filecast** to reinitialize clipboard tracking
+
+</Accordion>
+
+<Accordion title="Clipboard database errors">
+
+**Error message:** `Failed to create config directory` or SQLite errors
+
+**Cause:** Permission issues with `~/.config/filecast/` or corrupted `history.db`.
+
+**Solution:**
+
+```bash
+# Check directory permissions
+ls -ld ~/.config/filecast/
+
+# Should be owned by your user with write permissions
+# If not, fix permissions:
+chown -R $USER:$USER ~/.config/filecast/
+chmod 755 ~/.config/filecast/
+
+# If database is corrupted, remove and restart:
+mv ~/.config/filecast/history.db ~/.config/filecast/history.db.backup
+filecast
+```
+
+</Accordion>
+
+## Search and File Finding
+
+<Accordion title="Grep search (@pattern) is very slow">
+
+**Cause:** ripgrep is not installed, falling back to standard grep.
+
+**Solution:**
+
+Install ripgrep for significantly faster searches:
+
+```bash
+# Debian/Ubuntu
+sudo apt install ripgrep
+
+# Verify installation
+which rg
+# Should output: /usr/bin/rg
+```
+
+No restart needed - Filecast will automatically detect and use `rg` when available.
+
+</Accordion>
+
+<Accordion title="File finding (/pattern) is very slow">
+
+**Cause:** fd is not installed, falling back to standard find.
+
+**Solution:**
+
+Install fd for faster file searches:
+
+```bash
+# Debian/Ubuntu
+sudo apt install fd-find
+
+# Verify installation
+which fd
+# Should output: /usr/bin/fd or /usr/bin/fdfind
+```
+
+</Accordion>
+
+<Accordion title="Search excludes directories I want to search">
+
+**Cause:** Directory exclusions configured in `search.yaml`.
+
+**Solution:**
+
+Edit the search configuration:
+
+```bash
+nano ~/.config/filecast/search.yaml
+```
+
+Remove or modify exclusion patterns, then restart Filecast.
+
+</Accordion>
+
+## Display and Font Issues
+
+<Accordion title="Emoji or special characters show as boxes">
+
+**Cause:** NotoColorEmoji font not installed or not found at expected path.
+
+**Error location:** src/main.rs:120 loads `/usr/share/fonts/truetype/noto/NotoColorEmoji.ttf`
+
+**Solution:**
+
+```bash
+# Install the font
+sudo apt install fonts-noto-color-emoji
+
+# Verify it's in the right location
+ls -l /usr/share/fonts/truetype/noto/NotoColorEmoji.ttf
+
+# Restart Filecast
+```
+
+</Accordion>
+
+<Accordion title="Window appears off-screen or wrong position">
+
+**Cause:** Display resolution changed or settings file corrupted.
+
+**Solution:**
+
+Reset window position settings:
+
+```bash
+# Remove settings file
+rm ~/.config/filecast/settings.conf
+
+# Restart Filecast - it will use default (Top Center)
+filecast
+```
+
+Or manually edit settings:
+
+```bash
+nano ~/.config/filecast/settings.conf
+```
+
+Change position to one of: `TopCenter`, `Center`, `TopLeft`, `TopRight`, `BottomCenter`, `BottomLeft`, `BottomRight`
+
+</Accordion>
+
+<Accordion title="Window decorations showing or always-on-top not working">
+
+**Cause:** Window manager doesn't respect egui viewport settings.
+
+**Details:** Filecast sets window as undecorated and always-on-top (src/main.rs:51-52) via eframe, but some window managers ignore these hints.
+
+**Solution:**
+
+Add window manager rules manually:
+
+**For i3/Sway:**
+```
+for_window [class="filecast"] floating enable, border none, sticky enable
+```
+
+**For bspwm:**
+```
+bspc rule -a filecast state=floating border=off sticky=on
+```
+
+</Accordion>
+
+## Configuration Issues
+
+<Accordion title="Permission denied when creating config directory">
+
+**Error:** `Failed to create config directory`
+
+**Cause:** No write permissions to `~/.config/`
+
+**Solution:**
+
+```bash
+# Check ownership
+ls -ld ~/.config/
+
+# Fix if needed
+chown -R $USER:$USER ~/.config/
+
+# Ensure directory exists
+mkdir -p ~/.config/filecast
+```
+
+</Accordion>
+
+<Accordion title="Settings changes don't persist">
+
+**Symptoms:** Window position changes in Settings view don't save.
+
+**Cause:** Write permissions issue or settings file is read-only.
+
+**Solution:**
+
+```bash
+# Check file permissions
+ls -l ~/.config/filecast/settings.conf
+
+# Make writable
+chmod 644 ~/.config/filecast/settings.conf
+```
+
+</Accordion>
+
+## Application Launch Issues
+
+<Accordion title="Desktop applications not appearing in search">
+
+**Cause:** Filecast scans standard freedesktop .desktop file locations but may miss custom paths.
+
+**Solution:**
+
+Ensure `.desktop` files are in standard locations:
+- `/usr/share/applications/`
+- `~/.local/share/applications/`
+
+Filecast uses the `freedesktop-desktop-entry` parser (v0.7) to read these files.
+
+</Accordion>
+
+<Accordion title="File or app doesn't open when selected">
+
+**Cause:** The `opener` library (v0.8.4) cannot determine appropriate application.
+
+**Solution:**
+
+Set default applications using `xdg-mime`:
+
+```bash
+# For text files
+xdg-mime default code.desktop text/plain
+
+# For PDFs
+xdg-mime default org.gnome.Evince.desktop application/pdf
+```
+
+</Accordion>
+
+## Getting Help
+
+<Warning>
+Before reporting issues, check that you're running on **Linux with X11** - this is a hard requirement.
+</Warning>
+
+<Tip>
+Run Filecast from terminal to see error messages:
+
+```bash
+filecast
+```
+
+This will show detailed error output for debugging.
+</Tip>
+
+If you're still experiencing issues:
+
+1. Check the [GitHub Issues](https://github.com/ThembinkosiThemba/filecast/issues)
+2. Include your system info:
+   ```bash
+   uname -a
+   echo $XDG_SESSION_TYPE
+   cargo --version
+   ```
+3. Include relevant error messages from terminal output
